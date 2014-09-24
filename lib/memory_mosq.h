@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Roger Light <roger@atchoo.org>
+Copyright (c) 2010-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,9 +30,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MEMORY_MOSQ_H_
 #define _MEMORY_MOSQ_H_
 
+#include <stdio.h>
 #include <sys/types.h>
 
-#if defined(WITH_MEMORY_TRACKING) && defined(WITH_BROKER) && !defined(WIN32) && !defined(__SYMBIAN32__)
+#if defined(WITH_MEMORY_TRACKING) && defined(WITH_BROKER) && !defined(WIN32) && !defined(__SYMBIAN32__) && !defined(__ANDROID__)
 #define REAL_WITH_MEMORY_TRACKING
 #endif
 

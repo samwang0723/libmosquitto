@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2011 Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,16 +30,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <assert.h>
 #include <string.h>
 
-#include <mosquitto.h>
-#include <logging_mosq.h>
-#include <memory_mosq.h>
-#include <mqtt3_protocol.h>
-#include <net_mosq.h>
-#include <send_mosq.h>
-#include <util_mosq.h>
+#include "mosquitto.h"
+#include "logging_mosq.h"
+#include "memory_mosq.h"
+#include "mqtt3_protocol.h"
+#include "net_mosq.h"
+#include "send_mosq.h"
+#include "util_mosq.h"
 
 #ifdef WITH_BROKER
-#include <mosquitto_broker.h>
+#include "mosquitto_broker.h"
 #endif
 
 int _mosquitto_send_connect(struct mosquitto *mosq, uint16_t keepalive, bool clean_session)
@@ -49,7 +49,7 @@ int _mosquitto_send_connect(struct mosquitto *mosq, uint16_t keepalive, bool cle
 	uint8_t will = 0;
 	uint8_t byte;
 	int rc;
-	uint8_t version = PROTOCOL_VERSION;
+	uint8_t version = PROTOCOL_VERSION_v31;
 
 	assert(mosq);
 	assert(mosq->id);
@@ -80,7 +80,7 @@ int _mosquitto_send_connect(struct mosquitto *mosq, uint16_t keepalive, bool cle
 	}
 
 	/* Variable header */
-	_mosquitto_write_string(packet, PROTOCOL_NAME, strlen(PROTOCOL_NAME));
+	_mosquitto_write_string(packet, PROTOCOL_NAME_v31, strlen(PROTOCOL_NAME_v31));
 #if defined(WITH_BROKER) && defined(WITH_BRIDGE)
 	if(mosq->bridge && mosq->bridge->try_private && mosq->bridge->try_private_accepted){
 		version |= 0x80;

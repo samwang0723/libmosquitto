@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2011 Roger Light <roger@atchoo.org>
+Copyright (c) 2011-2014 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -27,21 +27,23 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <config.h>
+#include "config.h"
 
 #ifndef WIN32
 #include <unistd.h>
 #endif
 
-#include <mosquitto_internal.h>
+#include "mosquitto_internal.h"
+#include "net_mosq.h"
 
 void *_mosquitto_thread_main(void *obj);
 
 int mosquitto_loop_start(struct mosquitto *mosq)
 {
 #ifdef WITH_THREADING
-	if(!mosq) return MOSQ_ERR_INVAL;
+	if(!mosq || mosq->threaded) return MOSQ_ERR_INVAL;
 
+	mosq->threaded = true;
 	pthread_create(&mosq->thread_id, NULL, _mosquitto_thread_main, mosq);
 	return MOSQ_ERR_SUCCESS;
 #else
@@ -52,13 +54,30 @@ int mosquitto_loop_start(struct mosquitto *mosq)
 int mosquitto_loop_stop(struct mosquitto *mosq, bool force)
 {
 #ifdef WITH_THREADING
-	if(!mosq) return MOSQ_ERR_INVAL;
+#  ifndef WITH_BROKER
+	char sockpair_data = 0;
+#  endif
+
+	if(!mosq || !mosq->threaded) return MOSQ_ERR_INVAL;
+
+
+	/* Write a single byte to sockpairW (connected to sockpairR) to break out
+	 * of select() if in threaded mode. */
+	if(mosq->sockpairW != INVALID_SOCKET){
+#ifndef WIN32
+		if(write(mosq->sockpairW, &sockpair_data, 1)){
+		}
+#else
+		send(mosq->sockpairW, &sockpair_data, 1, 0);
+#endif
+	}
 	
 	if(force){
 		pthread_cancel(mosq->thread_id);
 	}
 	pthread_join(mosq->thread_id, NULL);
 	mosq->thread_id = pthread_self();
+	mosq->threaded = false;
 
 	return MOSQ_ERR_SUCCESS;
 #else
@@ -70,8 +89,6 @@ int mosquitto_loop_stop(struct mosquitto *mosq, bool force)
 void *_mosquitto_thread_main(void *obj)
 {
 	struct mosquitto *mosq = obj;
-	int run = 1;
-	int rc;
 
 	if(!mosq) return NULL;
 
@@ -83,24 +100,14 @@ void *_mosquitto_thread_main(void *obj)
 		pthread_mutex_unlock(&mosq->state_mutex);
 	}
 
-	while(run){
-		do{
-			rc = mosquitto_loop(mosq, -1, 1);
-		}while(rc == MOSQ_ERR_SUCCESS);
-		pthread_mutex_lock(&mosq->state_mutex);
-		if(mosq->state == mosq_cs_disconnecting){
-			run = 0;
-			pthread_mutex_unlock(&mosq->state_mutex);
-		}else{
-			pthread_mutex_unlock(&mosq->state_mutex);
-#ifdef WIN32
-			Sleep(1000);
-#else
-			sleep(1);
-#endif
-			mosquitto_reconnect(mosq);
-		}
+	if(!mosq->keepalive){
+		/* Sleep for a day if keepalive disabled. */
+		mosquitto_loop_forever(mosq, mosq->keepalive*1000*86400, 1);
+	}else{
+		/* Sleep for our keepalive value. publish() etc. will wake us up. */
+		mosquitto_loop_forever(mosq, mosq->keepalive*1000, 1);
 	}
+
 	return obj;
 }
 #endif

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009,2010, Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -31,15 +31,16 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <string.h>
 
-#include <mosquitto.h>
-#include <logging_mosq.h>
-#include <memory_mosq.h>
-#include <messages_mosq.h>
-#include <mqtt3_protocol.h>
-#include <net_mosq.h>
-#include <read_handle.h>
-#include <send_mosq.h>
-#include <util_mosq.h>
+#include "mosquitto.h"
+#include "logging_mosq.h"
+#include "memory_mosq.h"
+#include "messages_mosq.h"
+#include "mqtt3_protocol.h"
+#include "net_mosq.h"
+#include "read_handle.h"
+#include "send_mosq.h"
+#include "time_mosq.h"
+#include "util_mosq.h"
 
 int _mosquitto_packet_handle(struct mosquitto *mosq)
 {
@@ -87,17 +88,11 @@ int _mosquitto_handle_publish(struct mosquitto *mosq)
 
 	header = mosq->in_packet.command;
 
-	message->direction = mosq_md_in;
 	message->dup = (header & 0x08)>>3;
 	message->msg.qos = (header & 0x06)>>1;
 	message->msg.retain = (header & 0x01);
 
 	rc = _mosquitto_read_string(&mosq->in_packet, &message->msg.topic);
-	if(rc){
-		_mosquitto_message_cleanup(&message);
-		return rc;
-	}
-	rc = _mosquitto_fix_sub_topic(&message->msg.topic);
 	if(rc){
 		_mosquitto_message_cleanup(&message);
 		return rc;
@@ -119,6 +114,10 @@ int _mosquitto_handle_publish(struct mosquitto *mosq)
 	message->msg.payloadlen = mosq->in_packet.remaining_length - mosq->in_packet.pos;
 	if(message->msg.payloadlen){
 		message->msg.payload = _mosquitto_calloc(message->msg.payloadlen+1, sizeof(uint8_t));
+		if(!message->msg.payload){
+			_mosquitto_message_cleanup(&message);
+			return MOSQ_ERR_NOMEM;
+		}
 		rc = _mosquitto_read_bytes(&mosq->in_packet, message->msg.payload, message->msg.payloadlen);
 		if(rc){
 			_mosquitto_message_cleanup(&message);
@@ -131,7 +130,7 @@ int _mosquitto_handle_publish(struct mosquitto *mosq)
 			message->msg.mid, message->msg.topic,
 			(long)message->msg.payloadlen);
 
-	message->timestamp = time(NULL);
+	message->timestamp = mosquitto_time();
 	switch(message->msg.qos){
 		case 0:
 			pthread_mutex_lock(&mosq->callback_mutex);
@@ -156,10 +155,13 @@ int _mosquitto_handle_publish(struct mosquitto *mosq)
 			return rc;
 		case 2:
 			rc = _mosquitto_send_pubrec(mosq, message->msg.mid);
-			message->state = mosq_ms_wait_pubrel;
-			_mosquitto_message_queue(mosq, message);
+			pthread_mutex_lock(&mosq->in_message_mutex);
+			message->state = mosq_ms_wait_for_pubrel;
+			_mosquitto_message_queue(mosq, message, mosq_md_in);
+			pthread_mutex_unlock(&mosq->in_message_mutex);
 			return rc;
 		default:
+			_mosquitto_message_cleanup(&message);
 			return MOSQ_ERR_PROTOCOL;
 	}
 }

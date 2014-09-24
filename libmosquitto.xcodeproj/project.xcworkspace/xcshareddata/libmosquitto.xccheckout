@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>1269BFD7-D03E-4A3E-AF4D-8AB76BD1B115</string>
+	<key>IDESourceControlProjectName</key>
+	<string>libmosquitto</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>B77D89C965F87251169EDC6C904D7FD203E99A6A</key>
+		<string>https://github.com/samwang0723/libmosquitto.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>libmosquitto.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>B77D89C965F87251169EDC6C904D7FD203E99A6A</key>
+		<string>../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/samwang0723/libmosquitto.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>B77D89C965F87251169EDC6C904D7FD203E99A6A</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>B77D89C965F87251169EDC6C904D7FD203E99A6A</string>
+			<key>IDESourceControlWCCName</key>
+			<string>libmosquitto</string>
+		</dict>
+	</array>
+</dict>
+</plist>

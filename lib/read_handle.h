@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010, Roger Light <roger@atchoo.org>
+Copyright (c) 2010-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _READ_HANDLE_H_
 #define _READ_HANDLE_H_
 
-#include <mosquitto.h>
+#include "mosquitto.h"
 struct mosquitto_db;
 
 int _mosquitto_packet_handle(struct mosquitto *mosq);

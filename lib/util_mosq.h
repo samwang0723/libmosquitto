@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2012 Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,15 +29,19 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _UTIL_MOSQ_H_
 #define _UTIL_MOSQ_H_
 
-#include <mosquitto.h>
+#include <stdio.h>
+
+#include "tls_mosq.h"
+#include "mosquitto.h"
 
 int _mosquitto_packet_alloc(struct _mosquitto_packet *packet);
 void _mosquitto_check_keepalive(struct mosquitto *mosq);
-int _mosquitto_fix_sub_topic(char **subtopic);
 uint16_t _mosquitto_mid_generate(struct mosquitto *mosq);
 int _mosquitto_topic_wildcard_len_check(const char *str);
+int _mosquitto_topic_wildcard_pos_check(const char *str);
+FILE *_mosquitto_fopen(const char *path, const char *mode);
 
-#if defined(WITH_TLS) && defined(WITH_TLS_PSK)
+#ifdef REAL_WITH_TLS_PSK
 int _mosquitto_hex2bin(const char *hex, unsigned char *bin, int bin_max_len);
 #endif
 

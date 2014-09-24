@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010,2011 Roger Light <roger@atchoo.org>
+Copyright (c) 2010-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _WILL_MOSQ_H_
 #define _WILL_MOSQ_H_
 
-#include <mosquitto.h>
-#include <mosquitto_internal.h>
+#include "mosquitto.h"
+#include "mosquitto_internal.h"
 
 int _mosquitto_will_set(struct mosquitto *mosq, const char *topic, int payloadlen, const void *payload, int qos, bool retain);
 int _mosquitto_will_clear(struct mosquitto *mosq);

@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010,2011 Roger Light <roger@atchoo.org>
+Copyright (c) 2010,2011,2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -30,7 +30,10 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _MOSQUITTO_INTERNAL_H_
 #define _MOSQUITTO_INTERNAL_H_
 
-#include <config.h>
+/* 20130606, Sam Wang add for support SSL/TLS */
+#define WITH_TLS 1
+
+#include "config.h"
 
 #ifdef WIN32
 #  include <winsock2.h>
@@ -40,12 +43,15 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <openssl/ssl.h>
 #endif
 #include <stdlib.h>
-#include <time.h>
 
 #if defined(WITH_THREADING) && !defined(WITH_BROKER)
 #  include <pthread.h>
 #else
 #  include <dummypthread.h>
+#endif
+
+#ifdef WITH_SRV
+#  include <ares.h>
 #endif
 
 #ifdef WIN32
@@ -61,7 +67,8 @@ POSSIBILITY OF SUCH DAMAGE.
 #	include <stdint.h>
 #endif
 
-#include <mosquitto.h>
+#include "mosquitto.h"
+#include "time_mosq.h"
 #ifdef WITH_BROKER
 struct mosquitto_client_msg;
 #endif
@@ -73,17 +80,40 @@ enum mosquitto_msg_direction {
 
 enum mosquitto_msg_state {
 	mosq_ms_invalid = 0,
-	mosq_ms_wait_puback = 1,
-	mosq_ms_wait_pubrec = 2,
-	mosq_ms_wait_pubrel = 3,
-	mosq_ms_wait_pubcomp = 4
+	mosq_ms_publish_qos0 = 1,
+	mosq_ms_publish_qos1 = 2,
+	mosq_ms_wait_for_puback = 3,
+	mosq_ms_publish_qos2 = 4,
+	mosq_ms_wait_for_pubrec = 5,
+	mosq_ms_resend_pubrel = 6,
+	mosq_ms_wait_for_pubrel = 7,
+	mosq_ms_resend_pubcomp = 8,
+	mosq_ms_wait_for_pubcomp = 9,
+	mosq_ms_send_pubrec = 10,
+	mosq_ms_queued = 11
 };
 
 enum mosquitto_client_state {
 	mosq_cs_new = 0,
 	mosq_cs_connected = 1,
 	mosq_cs_disconnecting = 2,
-	mosq_cs_connect_async = 3
+	mosq_cs_connect_async = 3,
+	mosq_cs_connect_pending = 4,
+	mosq_cs_connect_srv = 5
+};
+
+enum _mosquitto_protocol {
+	mosq_p_invalid = 0,
+	mosq_p_mqtt31 = 1,
+	mosq_p_mqtt311 = 2,
+	mosq_p_mqtts = 3
+};
+
+enum _mosquitto_transport {
+	mosq_t_invalid = 0,
+	mosq_t_tcp = 1,
+	mosq_t_ws = 2,
+	mosq_t_sctp = 3
 };
 
 struct _mosquitto_packet{
@@ -103,7 +133,7 @@ struct _mosquitto_packet{
 struct mosquitto_message_all{
 	struct mosquitto_message_all *next;
 	time_t timestamp;
-	enum mosquitto_msg_direction direction;
+	//enum mosquitto_msg_direction direction;
 	enum mosquitto_msg_state state;
 	bool dup;
 	struct mosquitto_message msg;
@@ -112,9 +142,16 @@ struct mosquitto_message_all{
 struct mosquitto {
 #ifndef WIN32
 	int sock;
+#  ifndef WITH_BROKER
+	int sockpairR, sockpairW;
+#  endif
 #else
 	SOCKET sock;
+#  ifndef WITH_BROKER
+	SOCKET sockpairR, sockpairW;
+#  endif
 #endif
+	enum _mosquitto_protocol protocol;
 	char *address;
 	char *id;
 	char *username;
@@ -143,8 +180,8 @@ struct mosquitto {
 	char *tls_ciphers;
 	char *tls_psk;
 	char *tls_psk_identity;
+	bool tls_insecure;
 #endif
-	bool want_read;
 	bool want_write;
 #if defined(WITH_THREADING) && !defined(WITH_BROKER)
 	pthread_mutex_t callback_mutex;
@@ -153,22 +190,33 @@ struct mosquitto {
 	pthread_mutex_t out_packet_mutex;
 	pthread_mutex_t current_out_packet_mutex;
 	pthread_mutex_t state_mutex;
+	pthread_mutex_t in_message_mutex;
+	pthread_mutex_t out_message_mutex;
 	pthread_t thread_id;
 #endif
 #ifdef WITH_BROKER
 	bool is_bridge;
 	struct _mqtt3_bridge *bridge;
 	struct mosquitto_client_msg *msgs;
+	struct mosquitto_client_msg *last_msg;
+	int msg_count;
+	int msg_count12;
 	struct _mosquitto_acl_user *acl_list;
 	struct _mqtt3_listener *listener;
 	time_t disconnect_t;
 	int pollfd_index;
+	int db_index;
+	struct _mosquitto_packet *out_packet_last;
+	bool is_dropping;
 #else
 	void *userdata;
 	bool in_callback;
 	unsigned int message_retry;
 	time_t last_retry_check;
-	struct mosquitto_message_all *messages;
+	struct mosquitto_message_all *in_messages;
+	struct mosquitto_message_all *in_messages_last;
+	struct mosquitto_message_all *out_messages;
+	struct mosquitto_message_all *out_messages_last;
 	void (*on_connect)(struct mosquitto *, void *userdata, int rc);
 	void (*on_disconnect)(struct mosquitto *, void *userdata, int rc);
 	void (*on_publish)(struct mosquitto *, void *userdata, int mid);
@@ -179,7 +227,19 @@ struct mosquitto {
 	//void (*on_error)();
 	char *host;
 	int port;
-	int queue_len;
+	int in_queue_len;
+	int out_queue_len;
+	char *bind_address;
+	unsigned int reconnect_delay;
+	unsigned int reconnect_delay_max;
+	bool reconnect_exponential_backoff;
+	bool threaded;
+	struct _mosquitto_packet *out_packet_last;
+	int inflight_messages;
+	int max_inflight_messages;
+#  ifdef WITH_SRV
+	ares_channel achan;
+#  endif
 #endif
 };
 

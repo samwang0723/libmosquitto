@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009,2010, Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,11 +29,11 @@ POSSIBILITY OF SUCH DAMAGE.
 
 #include <assert.h>
 
-#include <mosquitto.h>
-#include <logging_mosq.h>
-#include <memory_mosq.h>
-#include <net_mosq.h>
-#include <read_handle.h>
+#include "mosquitto.h"
+#include "logging_mosq.h"
+#include "memory_mosq.h"
+#include "net_mosq.h"
+#include "read_handle.h"
 
 int _mosquitto_handle_connack(struct mosquitto *mosq)
 {

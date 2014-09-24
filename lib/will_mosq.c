@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2010,2011 Roger Light <roger@atchoo.org>
+Copyright (c) 2010-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -39,16 +39,16 @@ POSSIBILITY OF SUCH DAMAGE.
 typedef int ssize_t;
 #endif
 
-#include <mosquitto.h>
-#include <mosquitto_internal.h>
-#include <logging_mosq.h>
-#include <messages_mosq.h>
-#include <memory_mosq.h>
-#include <mqtt3_protocol.h>
-#include <net_mosq.h>
-#include <read_handle.h>
-#include <send_mosq.h>
-#include <util_mosq.h>
+#include "mosquitto.h"
+#include "mosquitto_internal.h"
+#include "logging_mosq.h"
+#include "messages_mosq.h"
+#include "memory_mosq.h"
+#include "mqtt3_protocol.h"
+#include "net_mosq.h"
+#include "read_handle.h"
+#include "send_mosq.h"
+#include "util_mosq.h"
 
 int _mosquitto_will_set(struct mosquitto *mosq, const char *topic, int payloadlen, const void *payload, int qos, bool retain)
 {
@@ -57,6 +57,8 @@ int _mosquitto_will_set(struct mosquitto *mosq, const char *topic, int payloadle
 	if(!mosq || !topic) return MOSQ_ERR_INVAL;
 	if(payloadlen < 0 || payloadlen > MQTT_MAX_PAYLOAD) return MOSQ_ERR_PAYLOAD_SIZE;
 	if(payloadlen > 0 && !payload) return MOSQ_ERR_INVAL;
+
+	if(_mosquitto_topic_wildcard_pos_check(topic)) return MOSQ_ERR_INVAL;
 
 	if(mosq->will){
 		if(mosq->will->topic){

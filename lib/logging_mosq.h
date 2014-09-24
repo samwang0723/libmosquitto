@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009,2010, Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,7 @@ POSSIBILITY OF SUCH DAMAGE.
 #ifndef _LOGGING_MOSQ_H_
 #define _LOGGING_MOSQ_H_
 
-#include <mosquitto.h>
+#include "mosquitto.h"
 
 int _mosquitto_log_printf(struct mosquitto *mosq, int priority, const char *fmt, ...);
 

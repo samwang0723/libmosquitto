@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009-2011 Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -31,18 +31,21 @@ POSSIBILITY OF SUCH DAMAGE.
 #include <stdio.h>
 #include <string.h>
 
-#include <mosquitto.h>
-#include <mosquitto_internal.h>
-#include <logging_mosq.h>
-#include <mqtt3_protocol.h>
-#include <memory_mosq.h>
-#include <net_mosq.h>
-#include <send_mosq.h>
-#include <util_mosq.h>
+#include "mosquitto.h"
+#include "mosquitto_internal.h"
+#include "logging_mosq.h"
+#include "mqtt3_protocol.h"
+#include "memory_mosq.h"
+#include "net_mosq.h"
+#include "send_mosq.h"
+#include "time_mosq.h"
+#include "util_mosq.h"
 
 #ifdef WITH_BROKER
-#include <mosquitto_broker.h>
+#include "mosquitto_broker.h"
+#  ifdef WITH_SYS_TREE
 extern uint64_t g_pub_bytes_sent;
+#  endif
 #endif
 
 int _mosquitto_send_pingreq(struct mosquitto *mosq)
@@ -56,7 +59,7 @@ int _mosquitto_send_pingreq(struct mosquitto *mosq)
 #endif
 	rc = _mosquitto_send_simple_command(mosq, PINGREQ);
 	if(rc == MOSQ_ERR_SUCCESS){
-		mosq->ping_t = time(NULL);
+		mosq->ping_t = mosquitto_time();
 	}
 	return rc;
 }
@@ -111,8 +114,8 @@ int _mosquitto_send_publish(struct mosquitto *mosq, uint16_t mid, const char *to
 #ifdef WITH_BROKER
 	if(mosq->listener && mosq->listener->mount_point){
 		len = strlen(mosq->listener->mount_point);
-		if(len > strlen(topic)){
-			topic += strlen(mosq->listener->mount_point);
+		if(len < strlen(topic)){
+			topic += len;
 		}else{
 			/* Invalid topic string. Should never happen, but silently swallow the message anyway. */
 			return MOSQ_ERR_SUCCESS;
@@ -122,7 +125,8 @@ int _mosquitto_send_publish(struct mosquitto *mosq, uint16_t mid, const char *to
 	if(mosq->bridge && mosq->bridge->topics && mosq->bridge->topic_remapping){
 		for(i=0; i<mosq->bridge->topic_count; i++){
 			cur_topic = &mosq->bridge->topics[i];
-			if(cur_topic->remote_prefix || cur_topic->local_prefix){
+			if((cur_topic->direction == bd_both || cur_topic->direction == bd_out) 
+					&& (cur_topic->remote_prefix || cur_topic->local_prefix)){
 				/* Topic mapping required on this topic if the message matches */
 
 				rc = mosquitto_topic_matches_sub(cur_topic->local_topic, topic, &match);
@@ -157,7 +161,9 @@ int _mosquitto_send_publish(struct mosquitto *mosq, uint16_t mid, const char *to
 						mapped_topic = topic_temp;
 					}
 					_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "Sending PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, mapped_topic, (long)payloadlen);
+#ifdef WITH_SYS_TREE
 					g_pub_bytes_sent += payloadlen;
+#endif
 					rc =  _mosquitto_send_real_publish(mosq, mid, mapped_topic, payloadlen, payload, qos, retain, dup);
 					_mosquitto_free(mapped_topic);
 					return rc;
@@ -167,7 +173,9 @@ int _mosquitto_send_publish(struct mosquitto *mosq, uint16_t mid, const char *to
 	}
 #endif
 	_mosquitto_log_printf(NULL, MOSQ_LOG_DEBUG, "Sending PUBLISH to %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic, (long)payloadlen);
+#  ifdef WITH_SYS_TREE
 	g_pub_bytes_sent += payloadlen;
+#  endif
 #else
 	_mosquitto_log_printf(mosq, MOSQ_LOG_DEBUG, "Client %s sending PUBLISH (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", mosq->id, dup, qos, retain, mid, topic, (long)payloadlen);
 #endif

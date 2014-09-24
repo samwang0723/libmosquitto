@@ -1,5 +1,5 @@
 /*
-Copyright (c) 2009,2010, Roger Light <roger@atchoo.org>
+Copyright (c) 2009-2013 Roger Light <roger@atchoo.org>
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -27,24 +27,23 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <config.h>
+#include "config.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-#include <memory_mosq.h>
+#include "memory_mosq.h"
 
 #ifdef REAL_WITH_MEMORY_TRACKING
 #  if defined(__APPLE__)
-#    define malloc_usable_size malloc_good_size
+#    include <malloc/malloc.h>
+#    define malloc_usable_size malloc_size
 #  elif defined(__FreeBSD__)
 #    include <malloc_np.h>
 #  else
 #    include <malloc.h>
 #  endif
 #endif
-
-#include <memory_mosq.h>
 
 #ifdef REAL_WITH_MEMORY_TRACKING
 static unsigned long memcount = 0;

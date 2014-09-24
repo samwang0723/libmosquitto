@@ -10,6 +10,104 @@ Usage
 -----
 Build using XCode, TARGET -> UniversalLib
 
+- (void) mqttInit:(NSString *)host withPort:(int)port
+{
+    // mosquitto ssl client connection
+    NSString *clientId = @"marquette_sample";
+    NSLog(@"Client ID: %@", clientId);
+    mMosquittoClient = [[MosquittoClient alloc] initWithClientId:clientId];
+    [mMosquittoClient setDelegate:self];
+    [mMosquittoClient setHost:host];
+    [mMosquittoClient setPort:port];
+    [mMosquittoClient connect];
+}
+
+- (void) mqttInitWithSSL:(NSString *)host withPort:(int)port
+{    
+    NSBundle *mainBundle = [NSBundle mainBundle];
+    NSString *caCrtFile = [mainBundle pathForResource: @"ca" ofType: @"crt"];
+    NSLog(@"caCrtFile=%@", caCrtFile);
+    const char *caCrt = [caCrtFile cStringUsingEncoding:NSASCIIStringEncoding];
+
+    NSString *clientCrtFile = [mainBundle pathForResource: @"client" ofType: @"crt"];
+    const char *clientCrt = [clientCrtFile cStringUsingEncoding:NSASCIIStringEncoding];
+
+    NSString *clientKeyFile = [mainBundle pathForResource: @"client" ofType: @"key"];
+    const char *clientKey = [clientKeyFile cStringUsingEncoding:NSASCIIStringEncoding];
+
+    // mosquitto ssl client connection
+    NSString *clientId = @"marquette_sample";
+    NSLog(@"Client ID: %@", clientId);
+    mMosquittoClient = [[MosquittoClient alloc] initWithClientId:clientId];
+    [mMosquittoClient setDelegate:self];
+    [mMosquittoClient setHost:host];
+    [mMosquittoClient setPort:port];
+    [MosquittoClient setClientPassword:@"client"];
+    [mMosquittoClient connectWithSSL:TLSV1 caCrt:caCrt caLocation:NULL clientCrt:clientCrt clientKey:clientKey];
+}
+
+- (void) mqttSubscribe:(NSString *)topic withQos:(int)qos
+{
+    if(nil != mMosquittoClient){
+        [mMosquittoClient subscribe:topic withQos:qos];
+    }
+}
+
+- (void) mqttPublish:(NSString *)topic withMessage:(NSString *)message withQos:(int)qos;
+{
+    if(nil != mMosquittoClient){
+        NSUInteger nsQos = qos;
+        [mMosquittoClient publishString:message toTopic:topic withQos:nsQos retain:YES];
+    }
+}
+
+- (void) mqttDisconnect
+{
+    if(nil != mMosquittoClient){
+        [mMosquittoClient disconnect];
+    }
+}
+
+- (void) mqttReconnect
+{
+    NSLog(@"mqttReconnect");
+    if(nil != mMosquittoClient){
+        [mMosquittoClient reconnect];
+    }
+}
+
+// Mosquitto callback listener
+- (void) didConnect:(NSUInteger)code
+{
+    NSLog(@"mosquitto didConnect");
+    if(mTimer != nil){
+        [mTimer invalidate];
+        mTimer = nil;
+    }
+    [self mqttSubscribe:@"test" withQos:1];
+    //[self mqttPublish:@"test" withMessage:@"sample string" withQos:1];
+}
+
+- (void) didDisconnect
+{
+    NSLog(@"mosquitto didDisconnect");
+
+    mTimer = [NSTimer scheduledTimerWithTimeInterval:10 // 10sec
+        target:self
+        selector:@selector(mqttReconnect)
+        userInfo:nil
+        repeats:YES];
+}
+
+- (void) didReceiveMessage:(MosquittoMessage*) mosq_msg
+{
+    NSLog(@"%@ => %@", mosq_msg.topic, mosq_msg.payload);
+}
+
+- (void) didPublish: (NSUInteger)messageId {}
+- (void) didSubscribe: (NSUInteger)messageId grantedQos:(NSArray*)qos {}
+- (void) didUnsubscribe: (NSUInteger)messageId {}
+
 
 TODO
 
