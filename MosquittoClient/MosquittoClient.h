@@ -48,8 +48,8 @@
 + (void) initialize;
 + (NSString*) version;
 
-
-- (MosquittoClient*) initWithClientId: (NSString *)clientId;
+- (MosquittoClient*) initWithClientId: (NSString*) clientId;
+- (MosquittoClient*) initWithClientId: (NSString*) clientId userName:(NSString *)userName password:(NSString *)password;
 - (void) setMessageRetry: (NSUInteger)seconds;
 - (void) connect;
 - (void) connectToHost: (NSString*)host;

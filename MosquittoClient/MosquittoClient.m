@@ -89,6 +89,10 @@ static int on_password_callback(char *buf, int size, int rwflag, void *userdata)
 }
 
 - (MosquittoClient*) initWithClientId: (NSString*) clientId {
+    return [self initWithClientId:clientId userName:nil password:nil];
+}
+
+- (MosquittoClient*) initWithClientId: (NSString*) clientId userName:(NSString *)userName password:(NSString *)password {
     if ((self = [super init])) {
         const char* cstrClientId = [clientId cStringUsingEncoding:NSUTF8StringEncoding];
         [self setHost: nil];
@@ -97,6 +101,11 @@ static int on_password_callback(char *buf, int size, int rwflag, void *userdata)
         [self setCleanSession: YES]; //NOTE: this isdisable clean to keep the broker remember this client
         
         mosq = mosquitto_new(cstrClientId, cleanSession, (__bridge void *)(self));
+        const char *cUserName = [userName cStringUsingEncoding:NSASCIIStringEncoding];
+        const char *cPassword = [password cStringUsingEncoding:NSASCIIStringEncoding];
+        if(userName != nil){
+            mosquitto_username_pw_set(mosq, cUserName, cPassword);
+        }
         mosquitto_connect_callback_set(mosq, on_connect);
         mosquitto_disconnect_callback_set(mosq, on_disconnect);
         mosquitto_publish_callback_set(mosq, on_publish);
